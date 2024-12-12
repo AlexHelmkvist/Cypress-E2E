@@ -67,16 +67,17 @@ describe('ID Scan API Test', () => {
                     input[0].files = backDataTransfer.files;
                     input[0].dispatchEvent(new Event('change', { bubbles: true }));
                     cy.get('.btn-primary').click();
-                    cy.wait(5000);
-                    
+                    cy.wait(4000);
+                    cy.get('#L2AGLb > .QS5gu').click();
+                    cy.wait(2000);
 
                 });
 
             });
         });
-        
+
     });
-Cypress.env ("ApiKey") 
+
     it('should perform an DrivingLiicence scan request successfully', () => {
         cy.request({
             method: 'POST',
@@ -127,26 +128,28 @@ Cypress.env ("ApiKey")
                     input[0].files = frontDataTransfer.files;
                     input[0].dispatchEvent(new Event('change', { bubbles: true }));
                     cy.get('.btn-primary').click();
-                    cy.wait(5000);
+                    cy.wait(4000);
+                    cy.get('#L2AGLb > .QS5gu').click();
+                    cy.wait(2000);
 
 
                 });
 
 
             });
-            
+
         });
-        
+
     });
-     
+
     it('should perform an Pass scan request successfully', () => {
         cy.request({
             method: 'POST',
             url: Cypress.env('API_URL'),
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': Cypress.env("API_KEY")    
-            },  
+                'Authorization': Cypress.env("API_KEY")
+            },
             body: {
                 "redirect_success": "https://google.com?q=success",
                 "redirect_failure": "https://bing.com?q=failure",
@@ -189,15 +192,17 @@ Cypress.env ("ApiKey")
                     input[0].files = frontDataTransfer.files;
                     input[0].dispatchEvent(new Event('change', { bubbles: true }));
                     cy.get('.btn-primary').click();
-                    cy.wait(5000);
+                    cy.wait(4000);
+                    cy.get('#L2AGLb > .QS5gu').click();
+                    cy.wait(2000);
                 });
 
 
             });
-            
+
         });
-        
+
     });
-    
+
 
 });

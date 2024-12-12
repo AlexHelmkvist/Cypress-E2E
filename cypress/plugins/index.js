@@ -1,4 +1,21 @@
 /// <reference types="cypress" />
+const selenium = require('selenium-webdriver');
+
+module.exports = (on, config) => {
+  on('task', {
+    startWebDriver({ browser }) {
+      const driver = new selenium.Builder().forBrowser(browser).build();
+      return driver.getSession().then(session => {
+        return { sessionId: session.getId(), capabilities: session.getCapabilities() };
+      });
+    },
+    stopWebDriver({ sessionId }) {
+      const driver = new selenium.Builder().usingServer().build();
+      return driver.quit();
+    }
+  });
+};
+
 // ***********************************************************
 // This example plugins/index.js can be used to load plugins
 //
