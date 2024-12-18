@@ -128,7 +128,7 @@ describe('ID Scan API Test', () => {
                     input[0].files = frontDataTransfer.files;
                     input[0].dispatchEvent(new Event('change', { bubbles: true }));
                     cy.get('.btn-primary').click();
-                    cy.wait(4000);
+                    cy.wait(5000);
                     cy.get('#L2AGLb > .QS5gu').click();
                     cy.wait(2000);
 
