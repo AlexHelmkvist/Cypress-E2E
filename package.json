@@ -3,7 +3,13 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test:all": "node run-tests.js",
+    "test": "cypress run",
+    "cy:run:chrome": "cypress run --browser chrome",
+    "cy:run:firefox": "cypress run --browser firefox",
+    "cy:run:edge": "cypress run --browser edge",
+    "cy:run:all-legacy": "npm run cy:run:chrome && npm run cy:run:firefox && npm run cy:run:edge",
+    "cy:run:all": "node run-tests-gui.js"
   },
   "author": "",
   "license": "ISC",
