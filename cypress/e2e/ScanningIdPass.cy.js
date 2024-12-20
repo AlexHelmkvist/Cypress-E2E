@@ -1,5 +1,6 @@
 /// <reference types="cypress"/>
 Cypress.on('uncaught:exception', () => false); // Catch errors
+//Use command npm run test:all to run in three browsers "Chrome,Edge,Firefox"
 
 describe('POST ID Scan API Test/ID_CARD', () => {
     // Function to verify the JSON data structure and value
