@@ -1,9 +1,7 @@
 /// <reference types="cypress"/>
 Cypress.on('uncaught:exception', () => false); // Catch errors
-//Use command npm run test:all to run in three browsers "Chrome,Edge,Firefox"
 
-describe('POST ID Scan API Test/ID_CARD', () => {
-    // Function to verify the JSON data structure and value
+describe('POST ID Scan API Test/pendingID_CARD', () => {
     const verifyJsonData = (jsonData) => {
         expect(jsonData).to.have.property('data');
         expect(jsonData.data.status).to.exist;
@@ -12,7 +10,7 @@ describe('POST ID Scan API Test/ID_CARD', () => {
         const expectedId = Cypress.env('sessionId');
         expect(jsonData.data.id).to.eql(expectedId);
     };
-        // Send a POST request to the API
+
     it('should perform an ID scan request successfully', () => {
         cy.request({
             method: 'POST',
@@ -34,13 +32,143 @@ describe('POST ID Scan API Test/ID_CARD', () => {
                 }
             }
         }).then((response) => {
-            // Save the response body to jsonData
             const statusCode = response.status;
             const isSuccessfulStatusCode = statusCode >= 200 && statusCode < 300;
 
             if (isSuccessfulStatusCode) {
                 const jsonData = response.body;
-                 // Save sessionId and redirectUrl to Cypress environment variables
+                Cypress.env('sessionId', jsonData.data.id);
+                Cypress.env('redirectUrl', jsonData.data.redirect_url);
+                Cypress.env('jsonData', jsonData); // Saving jsonData to an environment variable
+                verifyJsonData(jsonData);
+            } else {
+                throw new Error(`Unexpected status code: ${statusCode}`);
+            }
+        });
+    });
+});
+describe('GET ID Scan API Test pending/ID_CARD', () => {
+
+
+    let jsonData;
+    before(() => {
+        const getUrl = Cypress.env('GET_URL');
+        const sessionId = Cypress.env('sessionId');
+        const apiKey = Cypress.env('API_KEY');
+        const details = Cypress.env('details');
+
+        // Log URL and headers for debugging
+        cy.log(`GET URL: ${getUrl}/${sessionId}`);
+        cy.log(`Authorization: ${apiKey}`);
+
+        expect(getUrl, 'GET_URL environment variable').to.not.be.undefined;
+        expect(sessionId, 'sessionId environment variable').to.not.be.undefined;
+        expect(apiKey, 'API_KEY environment variable').to.not.be.undefined;
+
+        cy.request({
+            method: 'GET',
+            url: `${getUrl}/${sessionId}`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': apiKey
+            },
+            failOnStatusCode: false
+        }).then((response) => {
+            // Log full response for debugging
+            cy.log(`Statuskod: ${response.status}`);
+            cy.log(`Svar: ${JSON.stringify(response.body)}`);
+            jsonData = response.body;
+        });
+    });
+    const verifyJsonData = (jsonData) => {
+        expect(jsonData.data.status).to.exist;
+        expect(jsonData.data.status).to.eq('GeneratedLink');
+        expect(jsonData.data.errors).to.be.an('array').that.is.empty;
+        const expectedId = Cypress.env('sessionId');
+        expect(jsonData.data.id).to.eql(expectedId);
+    };
+
+    const verifyDocumentAnalysis = (jsonData) => {
+        expect(jsonData.data.result.documentAnalysis.images).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.documentAnalysis.ignoredErrorsInFields).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.documentAnalysis.excludedDocumentIds).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.documentAnalysis.history).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.documentAnalysis.status).to.eq('Requested');
+    };
+
+    const verifyLivenessAnalysis = (jsonData) => {
+        expect(jsonData.data.result.livenessAnalysis.history).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.livenessAnalysis.status).to.eq('NotRequested');
+    };
+
+    const verifyFaceMatchAnalysis = (jsonData) => {
+        expect(jsonData.data.result.faceMatchAnalysis.usedImages).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.faceMatchAnalysis.history).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.faceMatchAnalysis.status).to.eq('NotRequested');
+    };
+
+
+    it('Verify status', () => {
+        verifyJsonData(jsonData);
+    });
+
+    it('Verify result documentAnalysis', () => {
+        verifyDocumentAnalysis(jsonData);
+    });
+
+    it('Verify result livenessAnalysis', () => {
+        verifyLivenessAnalysis(jsonData);
+    });
+
+    it('Verify result faceMatchAnalysis', () => {
+        verifyFaceMatchAnalysis(jsonData);
+    });
+});
+describe('POST ID Scan API Test/successID_CARD', () => {
+    const verifyJsonData = (jsonData) => {
+        expect(jsonData).to.have.property('data');
+        expect(jsonData.data).to.have.property('status');
+        expect(jsonData.data.status).to.eq('GeneratedLink');
+        expect(jsonData.data).to.have.property('errors');
+        expect(jsonData.data.errors).to.be.an('array').that.is.empty;
+        const expectedId = Cypress.env('sessionId');
+        expect(jsonData.data).to.have.property('id');
+        expect(jsonData.data.id).to.eql(expectedId);
+    };
+    it('should perform an ID scan request successfully', () => {
+
+        cy.request({
+            method: 'POST',
+            url: Cypress.env('API_URL'),
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': Cypress.env('API_KEY'),
+
+            },
+            body: {
+                "redirect_success": "https://www.google.com/?q=success",
+                "redirect_failure": "https://www.bing.com/?q=failure",
+                "relay_state": "internal-user-id",
+                "gpdr_user_id": "gdpr-user-id",
+                "webhook": "https://webhook.site/340f6dc8-80ac-4dc8-b43f-9b94d3dc26ef",
+                "metadata": {
+                    "analysis_types": [
+                        "Document"
+                    ],
+
+                }
+            }
+        }).then((response) => {
+            // Log full response for debugging
+            cy.log(`Statuskod: ${response.status}`);
+            cy.log(`Svar: ${JSON.stringify(response.body)}`);
+
+            const jsonData = response.body;
+            const statusCode = response.status;
+            const isSuccessfulStatusCode = statusCode >= 200 && statusCode < 300;
+
+            if (isSuccessfulStatusCode) {
+                // Save sessionId and redirectUrl to Cypress environment variables
                 Cypress.env('sessionId', jsonData.data.id);
                 Cypress.env('redirectUrl', jsonData.data.redirect_url);
                 Cypress.env('jsonData', jsonData); // Saving jsonData to an environment variable
@@ -52,23 +180,23 @@ describe('POST ID Scan API Test/ID_CARD', () => {
                 // Interact with the web page
                 cy.get('.continue-in-browser__btn').should('be.visible').click();
                 cy.get('.select-flow__actions > :nth-child(2)').click();
-                cy.get('.option-list > :nth-child(2)').click();
+                cy.get('.option-list > :nth-child(3)').click();
                 // Upload the front side of the ID card
                 const filePath1 = 'image0.jpeg';
                 // Load the fixture file as a base64 string
                 cy.fixture(filePath1, 'base64').then((fileContent) => {
                     // Convert the base64 string to a Blob object
-                    const frontBlob = Cypress.Blob.base64StringToBlob(fileContent, 'image/png');
+                    const frontBlob = Cypress.Blob.base64StringToBlob(fileContent, 'image/jpeg');
                     // Create a new DataTransfer object and add the File to it
-                    const frontFile = new File([frontBlob], 'ID_card.png', { type: 'image/png' });
+                    const frontFile = new File([frontBlob], 'ID_card.jpeg', { type: 'image/jpeg' });
                     const frontDataTransfer = new DataTransfer();
                     frontDataTransfer.items.add(frontFile);
                     // Set the File object on the input element
                     cy.get('input[type=file]').eq(0).then((input) => {
                         input[0].files = frontDataTransfer.files;
-                        // Dispatch a change event to trigger any event listeners
                         input[0].dispatchEvent(new Event('change', { bubbles: true }));
                         cy.get('.btn-primary').click();
+                        cy.get('#L2AGLb > .QS5gu').click();
                     });
                 });
             } else {
@@ -76,55 +204,23 @@ describe('POST ID Scan API Test/ID_CARD', () => {
             }
         });
     });
-
-
-
-
 });
-describe('GET ID Scan API Test pending/ID_CARD', () => {
-    // Function to verify the JSON data structure and values
-    const verifyJsonData = (jsonData) => {
-        expect(jsonData).to.have.property('data');
-        expect(jsonData.data.status).to.exist;
-        expect(jsonData.data.status).to.eq('GeneratedLink');
-        expect(jsonData.data.errors).to.be.an('array').that.is.empty;
-        const expectedId = Cypress.env('sessionId');
-        expect(jsonData.data.id).to.eql(expectedId);
-    };
-     // Function to verify document analysis in the JSON data
-    const verifyDocumentAnalysis = (jsonData) => {
-        expect(jsonData).to.have.property('data');
-        expect(jsonData.data.result.documentAnalysis.images).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.documentAnalysis.ignoredErrorsInFields).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.documentAnalysis.excludedDocumentIds).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.documentAnalysis.history).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.documentAnalysis.status).to.eq('Requested');
-    };
-    // Function to verify liveness analysis in the JSON data
-    const verifyLivenessAnalysis = (jsonData) => {
-        expect(jsonData).to.have.property('data');
-        expect(jsonData.data.result.livenessAnalysis.history).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.livenessAnalysis.status).to.eq('NotRequested');
-    };
-    // Function to verify face match analysis in the JSON data
-    const verifyFaceMatchAnalysis = (jsonData) => {
-        expect(jsonData).to.have.property('data');
-        expect(jsonData.data.result.faceMatchAnalysis.usedImages).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.faceMatchAnalysis.history).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.faceMatchAnalysis.status).to.eq('NotRequested');
-    };
-
-
-
-    it('GET-PENDING', () => {
+describe('GET ID Scan API Test success/ID_CARD', () => {
+    let jsonData;
+    before(() => {
         const getUrl = Cypress.env('GET_URL');
         const sessionId = Cypress.env('sessionId');
         const apiKey = Cypress.env('API_KEY');
+        const details = Cypress.env('details');
+
+        // Log URL and headers for debugging
+        cy.log(`GET URL: ${getUrl}/${sessionId}`);
+        cy.log(`Authorization: ${apiKey}`);
 
         expect(getUrl, 'GET_URL environment variable').to.not.be.undefined;
         expect(sessionId, 'sessionId environment variable').to.not.be.undefined;
         expect(apiKey, 'API_KEY environment variable').to.not.be.undefined;
-        // Send a GET request to the API
+
         cy.request({
             method: 'GET',
             url: `${getUrl}/${sessionId}`,
@@ -134,115 +230,94 @@ describe('GET ID Scan API Test pending/ID_CARD', () => {
             },
             failOnStatusCode: false
         }).then((response) => {
-            // Log the status code and response body
+            // Log full response for debugging
             cy.log(`Statuskod: ${response.status}`);
             cy.log(`Svar: ${JSON.stringify(response.body)}`);
-
-            // Handle different status codes
-            if (response.status === 400) {
-                cy.log('400 Bad Request - Kontrollera URL, headers och payload.');
-                throw new Error('400 Bad Request');
-            } else if (response.status >= 200 && response.status < 300) {
-                const jsonData = response.body;
-                // Save sessionId and redirectUrl in Cypress environment variables
-                Cypress.env('sessionId', jsonData.data.id);
-                Cypress.env('redirectUrl', jsonData.data.redirect_url);
-                Cypress.env('jsonData', jsonData); // Saving jsonData to an environment variable
-            } else {
-                throw new Error(`Unexpected status code: ${response.status}`);
-            }
+            jsonData = response.body;
         });
     });
 
-    it('Verify status', () => {
-        const jsonData = Cypress.env('jsonData');
-        verifyJsonData(jsonData);
+    /*const VerifyLanguagecCountryCode = (jsonData) => {
+        const expectedLanguage = Cypress.env('Language');
+        expect(jsonData.data.language).to.eql(expectedLanguage);
+        const expectedCountryCode = Cypress.env('CountryCode');
+        expect(jsonData.data.country_code).to.an(expectedCountryCode);
+    };*/
+
+    it('Check if request data is retrieved successfully', () => {
+        expect(jsonData.data.request_data.redirect_failure).to.equal("https://www.bing.com/?q=failure");
+        expect(jsonData.data.request_data.redirect_success).to.equal("https://www.google.com/?q=success");
+        expect(jsonData.data.request_data.locale).to.equal("EN");
+        expect(jsonData.data.request_data.relay_state).to.equal("internal-user-id");
+        //expect(jsonData.data.request_data.gdpr_user_id).to.equal("gdpr_user_id");
+        expect(jsonData.data.request_data.webhook).to.equal("https://webhook.site/340f6dc8-80ac-4dc8-b43f-9b94d3dc26ef");
     });
 
-    it('Verify result documentAnalysis', () => {
-        const jsonData = Cypress.env('jsonData');
-        verifyDocumentAnalysis(jsonData);
-    });
+    /*it('Verify Languagec Country Code', () => {
+        VerifyLanguagecCountryCode(jsonData);
+    });*/
 
-    it('Verify result livenessAnalysis', () => {
-        const jsonData = Cypress.env('jsonData');
-        verifyLivenessAnalysis(jsonData);
-    });
-
-    it('Verify result faceMatchAnalysis', () => {
-        const jsonData = Cypress.env('jsonData');
-        verifyFaceMatchAnalysis(jsonData);
-    });
-});
-describe('GET ID Scan API Test success/ID_CARD', () => {
-    // Function to verify the JSON data structure and values
-    const verifyJsonData = (jsonData) => {
-        expect(jsonData.data.request_data.redirect_failure).to.equal('https://www.bing.com/?q=failure');
-        expect(jsonData.data.request_data.redirect_success).to.equal('https://www.google.com/?q=success');
-        expect(jsonData.data.request_data.locale).to.equal('SV');
-        expect(jsonData.data.request_data.relay_state).to.equal('internal-user-id');
-        expect(jsonData.data.request_data.gdpr_user_id).to.equal('gdpr_user_id');
-        expect(jsonData.data.request_data.webhook).to.equal('https://webhook.site/340f6dc8-80ac-4dc8-b43f-9b94d3dc26ef');
-    };
-    // Function to verify the status in the JSON data
     const verifyStatus = (jsonData) => {
-        expect(jsonData.data.status).to.eq('Declined');
+        expect(jsonData.data.status).to.be.eq("Declined");
     };
-    // Function to verify that there are no errors in the JSON data
-    const NoErorr = (jsonData) => {
-        expect(jsonData.data.errors).to.eql([]);
-    };
-    // Function to verify the analysis images in the JSON data
-    const verifyAnalysisImages = (jsonData) => {
-        const expectedAnalysisImages = Cypress.env('AnalysisImages');
-        Cypress.env('AnalysisImages', jsonData.data.result.documentAnalysis.images[0].url);
-        expect(jsonData.data.result.documentAnalysis.images[0].url).to.eql(expectedAnalysisImages);
-        expect(jsonData.data.result.documentAnalysis.textResult.validityStatus).to.eql('None');
-        expect(jsonData.data.result.documentAnalysis.summary.overallStatus).to.eql('Error');
-        expect(jsonData.data.result.documentAnalysis.images[0].mimeType).to.eql('image/jpeg');
 
+    const verifyNoError = (jsonData) => {
+        expect(jsonData.data.errors).to.be.eql([]);
     };
-    // Function to verify the identity analysis in the JSON data
 
     const verifyAnalysisImagesIdenfity = (jsonData) => {
+        expect(jsonData.data.result.documentAnalysis.identity).to.not.be.undefined;
         expect(jsonData.data.result.documentAnalysis.identity.firstName).to.eql('JAN EVERT JIMMY');
         expect(jsonData.data.result.documentAnalysis.identity.lastName).to.eql('OWINDEBORN');
         expect(jsonData.data.result.documentAnalysis.identity.fullName).to.eql('OWINDEBORN JAN EVERT JIMMY');
         expect(jsonData.data.result.documentAnalysis.identity.personalNumber).to.eql('');
-        expect(jsonData.data.result.identity.dateOfBirth).to.eql('1989-07-09');
-        expect(jsonData.data.result.documentAnalysis.identity.age).to.eql(35);
-        expect(jsonData.data.result.documentAnalysis.identity.idProviderName).to.eql('DP50');
     };
-    // Function to verify identity information in English in the JSON data
+
     const verifyAnalysisImagesIdenfityEnglish = (jsonData) => {
+        expect(jsonData.data.result.documentAnalysis.identityEnglish).to.not.be.undefined;
         expect(jsonData.data.result.documentAnalysis.identityEnglish.firstName).to.eql('JAN EVERT JIMMY');
         expect(jsonData.data.result.documentAnalysis.identityEnglish.lastName).to.eql('OWINDEBORN');
         expect(jsonData.data.result.documentAnalysis.identityEnglish.fullName).to.eql('OWINDEBORN JAN EVERT JIMMY');
         expect(jsonData.data.result.documentAnalysis.identityEnglish.personalNumber).to.eql('');
-        expect(jsonData.data.result.documentAnalysis.identityEnglish.dateOfBirth).to.eql('1989-07-09');
-        expect(jsonData.data.result.documentAnalysis.identityEnglish.age).to.eql(35);
-        expect(jsonData.data.result.documentAnalysis.identity.idProviderName).to.eql('DP50');
-        expect(jsonData.data.result.documentAnalysis.documentType.type).to.eql('DRIVING_LICENSE');
     };
-    // Function to verify the overall status of the document analysis in the JSON data
+
     const verifyDocumentAnalysisOverallStatus = (jsonData) => {
         expect(jsonData.data.result.documentAnalysis.overallStatus).to.eq('Error');
     };
-    // Function to verify the document type in the JSON data
+
     const verifyAnalysisDocumentType = (jsonData) => {
+        expect(jsonData.data.result.documentAnalysis.documentType).to.not.be.undefined;
         expect(jsonData.data.result.documentAnalysis.documentType.name).to.eq('Sweden - Driving License (2013)');
         expect(jsonData.data.result.documentAnalysis.documentType.year).to.eq('2013');
         expect(jsonData.data.result.documentAnalysis.documentType.countryName).to.eq('Sweden');
         expect(jsonData.data.result.documentAnalysis.documentType.countryCode).to.eq('SE');
-        expect(jsonData.data.result.documentAnalysis.documentType.hasMrz).to.eq(false);
     };
 
+    it('Verify Error', () => {
+        verifyStatus(jsonData);
+    });
 
+    it('verify Status', () => {
+        verifyNoError(jsonData);
+    });
 
+    it('verify Analysis Images Idenfity', () => {
+        verifyAnalysisImagesIdenfity(jsonData);
+    });
 
+    it('verify Analysis Images Idenfity English', () => {
+        verifyAnalysisImagesIdenfityEnglish(jsonData);
+    });
+
+    it('verify Document Analysis Overall Status', () => {
+        verifyDocumentAnalysisOverallStatus(jsonData);
+    });
+
+    it('Verify Analysis Document Type', () => {
+        verifyAnalysisDocumentType(jsonData);
+    });
 });
-describe('POST ID Scan API Test/DRIVING_LICENSE', () => {
-    // Function to verify the JSON data structure and values
+describe('POST ID Scan API Test/pending/DRIVING_LICENSE', () => {
     const verifyJsonData = (jsonData) => {
         expect(jsonData).to.have.property('data');
         expect(jsonData.data.status).to.exist;
@@ -253,7 +328,6 @@ describe('POST ID Scan API Test/DRIVING_LICENSE', () => {
     };
 
     it('should perform an ID scan request successfully', () => {
-        // Send a POST request to the API
         cy.request({
             method: 'POST',
             url: Cypress.env('API_URL'),
@@ -278,66 +352,91 @@ describe('POST ID Scan API Test/DRIVING_LICENSE', () => {
             const isSuccessfulStatusCode = statusCode >= 200 && statusCode < 300;
 
             if (isSuccessfulStatusCode) {
-                // Save the response body to jsonData
                 const jsonData = response.body;
-                // Save sessionId and redirectUrl to Cypress environment variables
                 Cypress.env('sessionId', jsonData.data.id);
                 Cypress.env('redirectUrl', jsonData.data.redirect_url);
                 Cypress.env('jsonData', jsonData); // Saving jsonData to an environment variable
-                // Verify the JSON data
                 verifyJsonData(jsonData);
-                // Visit the redirect URL
-                cy.visit(jsonData.data.redirect_url);
-                cy.wait(1000);
-                cy.get('.continue-in-browser__btn').should('be.visible').click();
-                cy.get('.select-flow__actions > :nth-child(2)').click();
-                cy.get('.option-list > :nth-child(1)').click();
-                // Upload the front side of the ID card
-                const filePath1 = 'image1.jpeg';
-                // Load the fixture file as a base64 string
-                cy.fixture('image1.jpeg').then((filePath1) => {
-                    // Convert the base64 string to a Blob object
-                    const frontBlob = Cypress.Blob.base64StringToBlob(filePath1, 'image/jpeg');
-                    // Create a new DataTransfer object and add the File to it
-                    const frontFile = new File([frontBlob], 'ID_card.jpeg', { type: 'image/jpeg' });
-                    const frontDataTransfer = new DataTransfer();
-                    frontDataTransfer.items.add(frontFile);
-                    // Set the File object on the input element
-                    cy.get('input[type=file]').eq(0).then((input) => {
-                        input[0].files = frontDataTransfer.files;
-                        input[0].dispatchEvent(new Event('change', { bubbles: true }));
-
-                    });
-
-
-                });
-                // Upload the back side of the ID card
-                const filePath2 = 'image2.jpeg';
-                // Load the fixture file as a base64 string
-                cy.fixture('image2.jpeg').then((filePath2) => {
-                    // Convert the base64 string to a Blob object
-                    const backBlob = Cypress.Blob.base64StringToBlob(filePath2, 'image/jpeg');
-                    // Create a new DataTransfer object and add the File to it
-                    const backFile = new File([backBlob], 'ID_card.jpeg', { type: 'image/jpeg' });
-                    // Create a new DataTransfer object and add the File to it
-                    const backDataTransfer = new DataTransfer();
-                    backDataTransfer.items.add(backFile);
-                    // Set the File object on the input element
-                    cy.get('input[type=file]').eq(1).then((input) => {
-                        input[0].files = backDataTransfer.files;
-                        input[0].dispatchEvent(new Event('change', { bubbles: true }));
-                        cy.get('.btn-primary').click();
-                    });
-                });
             } else {
                 throw new Error(`Unexpected status code: ${statusCode}`);
             }
         });
     });
-
 });
 describe('GET ID Scan API Test pending/DRIVING_LICENSE', () => {
-    // Function to verify the JSON data structure and values
+    let jsonData; // Определение переменной jsonData
+
+    before(() => {
+        const getUrl = Cypress.env('GET_URL');
+        const sessionId = Cypress.env('sessionId');
+        const details = Cypress.env('details');
+        const apiKey = Cypress.env('API_KEY');
+
+        // Log URL and headers for debugging
+        cy.log(`GET URL: ${getUrl}/${sessionId}/${details}`);
+        cy.log(`Authorization: ${apiKey}`);
+
+        expect(getUrl, 'GET_URL environment variable').to.not.be.undefined;
+        expect(sessionId, 'sessionId environment variable').to.not.be.undefined;
+        expect(apiKey, 'details environment variable').to.not.be.undefined;
+        expect(apiKey, 'API_KEY environment variable').to.not.be.undefined;
+
+
+        cy.request({
+            method: 'GET',
+            url: `${getUrl}/${sessionId}/${details}`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': apiKey
+            },
+            failOnStatusCode: false
+        }).then((response) => {
+            // Log full response for debugging
+            cy.log(`Statuskod: ${response.status}`);
+            cy.log(`Svar: ${JSON.stringify(response.body)}`);
+
+            // Сохранение jsonData из ответа
+            jsonData = response.body;
+        });
+    });
+
+    /*const VerifyLanguagecCountryCode = (jsonData) => {
+        const expectedLanguage = Cypress.env('Language');
+        expect(jsonData.data.language).to.eql(expectedLanguage);
+        const expectedCountryCode = Cypress.env('CountryCode');
+        expect(jsonData.data.country_code).to.eql(expectedCountryCode);
+    };*/
+
+    it('Check if request data is retrieved successfully', () => {
+        expect(jsonData.data.request_data.redirect_failure).to.equal('https://bing.com?q=failure');
+        expect(jsonData.data.request_data.redirect_success).to.equal('https://www.google.com/?q=success');
+        expect(jsonData.data.request_data.locale).to.equal('EN');
+        expect(jsonData.data.request_data.relay_state).to.equal('my-internal-user-id');
+        expect(jsonData.data.request_data.webhook).to.equal('https://webhook.site/340f6dc8-80ac-4dc8-b43f-9b94d3dc26ef');
+    });
+
+    it('Verify status', () => {
+        expect(jsonData.data.status).to.eq('GeneratedLink');
+    });
+
+    it('No errors', () => {
+        expect(jsonData.data.errors).to.eql([]);
+    });
+
+    it('Verify document analysis status', () => {
+        expect(jsonData.data.result.documentAnalysis.status).to.eq('Requested');
+    });
+
+    it('Verify liveness analysis status', () => {
+        expect(jsonData.data.result.livenessAnalysis.status).to.eq('NotRequested');
+    });
+
+    it('Verify face match analysis status', () => {
+        expect(jsonData.data.result.faceMatchAnalysis.status).to.eq('NotRequested');
+    });
+
+});
+describe('POST ID Scan API Test success/DRIVING_LICENSE', () => {
     const verifyJsonData = (jsonData) => {
         expect(jsonData).to.have.property('data');
         expect(jsonData.data.status).to.exist;
@@ -346,40 +445,102 @@ describe('GET ID Scan API Test pending/DRIVING_LICENSE', () => {
         const expectedId = Cypress.env('sessionId');
         expect(jsonData.data.id).to.eql(expectedId);
     };
-    // Function to verify document analysis in the JSON data
-    const verifyDocumentAnalysis = (jsonData) => {
-        expect(jsonData).to.have.property('data');
-        expect(jsonData.data.result.documentAnalysis.images).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.documentAnalysis.ignoredErrorsInFields).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.documentAnalysis.excludedDocumentIds).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.documentAnalysis.history).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.documentAnalysis.status).to.eq('Requested');
-    };
-    // Function to verify liveness analysis in the JSON data
-    const verifyLivenessAnalysis = (jsonData) => {
-        expect(jsonData).to.have.property('data');
-        expect(jsonData.data.result.livenessAnalysis.history).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.livenessAnalysis.status).to.eq('NotRequested');
-    };
-    // Function to verify face match analysis in the JSON data
-    const verifyFaceMatchAnalysis = (jsonData) => {
-        expect(jsonData).to.have.property('data');
-        expect(jsonData.data.result.faceMatchAnalysis.usedImages).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.faceMatchAnalysis.history).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.faceMatchAnalysis.status).to.eq('NotRequested');
-    };
 
+    it('should perform an ID scan request successfully', () => {
+        cy.request({
+            method: 'POST',
+            url: Cypress.env('API_URL'),
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': Cypress.env('API_KEY')
+            },
+            body: {
+                "redirect_success": "https://www.google.com/?q=success",
+                "redirect_failure": "https://bing.com?q=failure",
+                "relay_state": "internal-user-id",
+                "gpdr_user_id": "gdpr-user-id",
+                "webhook": "https://webhook.site/340f6dc8-80ac-4dc8-b43f-9b94d3dc26ef",
+                "metadata": {
+                    "analysis_types": [
+                        "Document"
+                    ]
+                }
+            }
+        }).then((response) => {
+            // Log full response for debugging
+            cy.log(`Statuskod: ${response.status}`);
+            cy.log(`Svar: ${JSON.stringify(response.body)}`);
+            
+            const statusCode = response.status;
+            const isSuccessfulStatusCode = statusCode >= 200 && statusCode < 300;
 
+            if (isSuccessfulStatusCode) {
+                const jsonData = response.body;
+                Cypress.env('sessionId', jsonData.data.id);
+                Cypress.env('redirectUrl', jsonData.data.redirect_url);
+                Cypress.env('jsonData', jsonData); // Saving jsonData to an environment variable
+                verifyJsonData(jsonData);
 
-    it('GET-PENDING', () => {
+                cy.visit(jsonData.data.redirect_url);
+                cy.get('.continue-in-browser__btn').should('be.visible').click();
+                cy.get('.select-flow__actions > :nth-child(2)').click();
+                cy.get('.option-list > :nth-child(1)').click();
+    
+                const filePath1 = 'image1.jpeg';
+                // Load the fixture file as a base64 string
+                cy.fixture(filePath1, 'base64').then((fileContent) => {
+                    // Convert the base64 string to a Blob object
+                    const frontBlob = Cypress.Blob.base64StringToBlob(fileContent, 'image/jpeg');
+                    // Create a new DataTransfer object and add the File to it
+                    const frontFile = new File([frontBlob], 'ID_card.jpeg', { type: 'image/jpeg' });
+                    const frontDataTransfer = new DataTransfer();
+                    frontDataTransfer.items.add(frontFile);
+                    // Set the File object on the input element
+                    cy.get('input[type=file]').eq(0).then((input) => {
+                        input[0].files = frontDataTransfer.files;
+                        input[0].dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                    const filePath2 = 'image2.jpeg';
+                    // Load the fixture file as a base64 string
+                    cy.fixture(filePath2, 'base64').then((fileContent) => {
+                        // Convert the base64 string to a Blob object
+                        const frontBlob = Cypress.Blob.base64StringToBlob(fileContent, 'image/jpeg');
+                        // Create a new DataTransfer object and add the File to it
+                        const backFile = new File([frontBlob], 'ID_card.jpeg', { type: 'image/jpeg' });
+                        const backDataTransfer = new DataTransfer();
+                        backDataTransfer.items.add(backFile);
+                        // Set the File object on the input element
+                        cy.get('input[type=file]').eq(1).then((input) => {
+                            input[0].files = backDataTransfer.files;
+                            input[0].dispatchEvent(new Event('change', { bubbles: true }));
+                            cy.get('.btn-primary').click();
+                            cy.get('#L2AGLb > .QS5gu').click();
+                        });
+                    });
+                });    
+            } else {
+                throw new Error(`Unexpected status code: ${statusCode}`);
+            }
+        });
+    });
+
+});
+describe('GET ID Scan API Test success/DRIVING_LICENSE', () => {
+    let jsonData;
+    before(() => {
         const getUrl = Cypress.env('GET_URL');
         const sessionId = Cypress.env('sessionId');
         const apiKey = Cypress.env('API_KEY');
+        const details = Cypress.env('details');
+
+        // Log URL and headers for debugging
+        cy.log(`GET URL: ${getUrl}/${sessionId}`);
+        cy.log(`Authorization: ${apiKey}`);
 
         expect(getUrl, 'GET_URL environment variable').to.not.be.undefined;
         expect(sessionId, 'sessionId environment variable').to.not.be.undefined;
         expect(apiKey, 'API_KEY environment variable').to.not.be.undefined;
-        // Send a GET request to the API
+
         cy.request({
             method: 'GET',
             url: `${getUrl}/${sessionId}`,
@@ -389,76 +550,34 @@ describe('GET ID Scan API Test pending/DRIVING_LICENSE', () => {
             },
             failOnStatusCode: false
         }).then((response) => {
-            // Log the status code and response body
+            // Log full response for debugging
             cy.log(`Statuskod: ${response.status}`);
             cy.log(`Svar: ${JSON.stringify(response.body)}`);
-
-            // Handle different status codes
-            if (response.status === 400) {
-                cy.log('400 Bad Request - Kontrollera URL, headers och payload.');
-                throw new Error('400 Bad Request');
-            } else if (response.status >= 200 && response.status < 300) {
-                const jsonData = response.body;
-                // Save sessionId and redirectUrl in Cypress environment variables
-                Cypress.env('sessionId', jsonData.data.id);
-                Cypress.env('redirectUrl', jsonData.data.redirect_url);
-                Cypress.env('jsonData', jsonData); // Saving jsonData to an environment variable
-            } else {
-                throw new Error(`Unexpected status code: ${response.status}`);
-            }
+            jsonData = response.body;
         });
     });
 
-    it('Verify status', () => {
-        const jsonData = Cypress.env('jsonData');
-        verifyJsonData(jsonData);
-    });
+    /*const VerifyLanguagecCountryCode = (jsonData) => {
+        const expectedLanguage = Cypress.env('Language');
+        expect(jsonData.data.language).to.eql(expectedLanguage);
+        const expectedCountryCode = Cypress.env('CountryCode');
+        expect(jsonData.data.country_code).to.an(expectedCountryCode);
+    };*/
 
-    it('Verify result documentAnalysis', () => {
-        const jsonData = Cypress.env('jsonData');
-        verifyDocumentAnalysis(jsonData);
-    });
 
-    it('Verify result livenessAnalysis', () => {
-        const jsonData = Cypress.env('jsonData');
-        verifyLivenessAnalysis(jsonData);
-    });
-
-    it('Verify result faceMatchAnalysis', () => {
-        const jsonData = Cypress.env('jsonData');
-        verifyFaceMatchAnalysis(jsonData);
-    });
-
-});
-describe('GET ID Scan API Test success/DRIVING_LICENSE', () => {
-    // Function to verify the JSON data structure and values
     const verifyJsonData = (jsonData) => {
-        expect(jsonData.data.request_data.redirect_failure).to.equal('https://www.bing.com/?q=failure');
+        expect(jsonData.data.request_data.redirect_failure).to.equal('https://bing.com?q=failure');
         expect(jsonData.data.request_data.redirect_success).to.equal('https://www.google.com/?q=success');
-        expect(jsonData.data.request_data.locale).to.equal('SV');
+        expect(jsonData.data.request_data.locale).to.equal('EN');
         expect(jsonData.data.request_data.relay_state).to.equal('internal-user-id');
-        expect(jsonData.data.request_data.gdpr_user_id).to.equal('gdpr_user_id');
+        //expect(jsonData.data.request_data.gdpr_user_id).to.equal('gdpr_user_id');
         expect(jsonData.data.request_data.webhook).to.equal('https://webhook.site/340f6dc8-80ac-4dc8-b43f-9b94d3dc26ef');
     };
-    // Function to verify the status in the JSON data
+
     const verifyStatus = (jsonData) => {
         expect(jsonData.data.status).to.eq('Declined');
     };
-    // Function to verify that there are no errors in the JSON data
-    const NoErorr = (jsonData) => {
-        expect(jsonData.data.errors).to.eql([]);
-    };
-    // Function to verify the analysis images in the JSON data
-    const verifyAnalysisImages = (jsonData) => {
-        const expectedAnalysisImages = Cypress.env('AnalysisImages');
-        Cypress.env('AnalysisImages', jsonData.data.result.documentAnalysis.images[0].url);
-        expect(jsonData.data.result.documentAnalysis.images[0].url).to.eql(expectedAnalysisImages);
-        expect(jsonData.data.result.documentAnalysis.textResult.validityStatus).to.eql('None');
-        expect(jsonData.data.result.documentAnalysis.summary.overallStatus).to.eql('Error');
-        expect(jsonData.data.result.documentAnalysis.images[0].mimeType).to.eql('image/jpeg');
-
-    };
-    // Function to verify the identity analysis in the JSON data
+    
     const verifyAnalysisImagesIdenfity = (jsonData) => {
         expect(jsonData.data.result.documentAnalysis.identity.firstName).to.eql('OHAN');
         expect(jsonData.data.result.documentAnalysis.identity.lastName).to.eql('ANDERSSON');
@@ -468,7 +587,6 @@ describe('GET ID Scan API Test success/DRIVING_LICENSE', () => {
         expect(jsonData.data.result.documentAnalysis.identity.age).to.eql(58);
         expect(jsonData.data.result.documentAnalysis.identity.idProviderName).to.eql('DP50');
     };
-    // Function to verify identity information in English in the JSON data
     const verifyAnalysisImagesIdenfityEnglish = (jsonData) => {
         expect(jsonData.data.result.documentAnalysis.identityEnglish.countryCode).to.eql('SE');
         expect(jsonData.data.result.documentAnalysis.identityEnglish.firstName).to.eql('OHAN');
@@ -480,11 +598,9 @@ describe('GET ID Scan API Test success/DRIVING_LICENSE', () => {
         expect(jsonData.data.result.documentAnalysis.identity.idProviderName).to.eql('DP50');
         expect(jsonData.data.result.documentAnalysis.documentType.type).to.eql('DRIVING_LICENSE');
     };
-    // Function to verify the overall status of the document analysis in the JSON data
     const verifyDocumentAnalysisOverallStatus = (jsonData) => {
         expect(jsonData.data.result.documentAnalysis.overallStatus).to.eq('Error');
     };
-    // Function to verify the document type in the JSON data
     const verifyAnalysisDocumentType = (jsonData) => {
         expect(jsonData.data.result.documentAnalysis.documentType.name).to.eq('Sweden - Driving License (2007)');
         expect(jsonData.data.result.documentAnalysis.documentType.year).to.eq('2007');
@@ -495,11 +611,34 @@ describe('GET ID Scan API Test success/DRIVING_LICENSE', () => {
     };
 
 
+    it('Verify JsonData', () => {
+        verifyJsonData(jsonData);
+    });
+
+    it('VerifyStatus', () => {
+        verifyStatus(jsonData);
+    });
+
+    it('Verify Analysis Images Idenfity', () => {
+        verifyAnalysisImagesIdenfity(jsonData);
+    });
+
+    it('Verify Analysis Images Idenfity English', () => {
+        verifyAnalysisImagesIdenfityEnglish(jsonData);
+    });
+
+    it('Verify Document Analysis Overall Status', () => {
+        verifyDocumentAnalysisOverallStatus(jsonData);
+    });
+
+    it('Verify Analysis Document Type', () => {
+        verifyAnalysisDocumentType(jsonData);
+    });
+
 
 
 });
-describe('POST ID Scan API Test/PASS', () => {
-    // Send a POST request to the API
+describe('POST ID Scan API Test pending/PASS', () => {
     const verifyJsonData = (jsonData) => {
         expect(jsonData).to.have.property('data');
         expect(jsonData.data.status).to.exist;
@@ -534,38 +673,155 @@ describe('POST ID Scan API Test/PASS', () => {
             const isSuccessfulStatusCode = statusCode >= 200 && statusCode < 300;
 
             if (isSuccessfulStatusCode) {
-                // Save the response body to jsonData
                 const jsonData = response.body;
-                // Save sessionId and redirectUrl to Cypress environment variables
                 Cypress.env('sessionId', jsonData.data.id);
                 Cypress.env('redirectUrl', jsonData.data.redirect_url);
                 Cypress.env('jsonData', jsonData); // Saving jsonData to an environment variable
-                // Verify the JSON data
                 verifyJsonData(jsonData);
-                // Visit the redirect URL
+            } else {
+                throw new Error(`Unexpected status code: ${statusCode}`);
+            }
+        });
+    });
+});
+describe('GET ID Scan API Test pending/PASS', () => {
+
+
+    let jsonData;
+    before(() => {
+        const getUrl = Cypress.env('GET_URL');
+        const sessionId = Cypress.env('sessionId');
+        const apiKey = Cypress.env('API_KEY');
+        const details = Cypress.env('details');
+
+        // Log URL and headers for debugging
+        cy.log(`GET URL: ${getUrl}/${sessionId}`);
+        cy.log(`Authorization: ${apiKey}`);
+
+        expect(getUrl, 'GET_URL environment variable').to.not.be.undefined;
+        expect(sessionId, 'sessionId environment variable').to.not.be.undefined;
+        expect(apiKey, 'API_KEY environment variable').to.not.be.undefined;
+
+        cy.request({
+            method: 'GET',
+            url: `${getUrl}/${sessionId}`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': apiKey
+            },
+            failOnStatusCode: false
+        }).then((response) => {
+            // Log full response for debugging
+            cy.log(`Statuskod: ${response.status}`);
+            cy.log(`Svar: ${JSON.stringify(response.body)}`);
+            jsonData = response.body;
+        });
+    });
+    const verifyJsonData = (jsonData) => {
+        expect(jsonData.data.status).to.exist;
+        expect(jsonData.data.status).to.eq('GeneratedLink');
+        expect(jsonData.data.errors).to.be.an('array').that.is.empty;
+        const expectedId = Cypress.env('sessionId');
+        expect(jsonData.data.id).to.eql(expectedId);
+    };
+
+    const verifyDocumentAnalysis = (jsonData) => {
+        expect(jsonData.data.result.documentAnalysis.images).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.documentAnalysis.ignoredErrorsInFields).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.documentAnalysis.excludedDocumentIds).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.documentAnalysis.history).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.documentAnalysis.status).to.eq('Requested');
+    };
+
+    const verifyLivenessAnalysis = (jsonData) => {
+        expect(jsonData.data.result.livenessAnalysis.history).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.livenessAnalysis.status).to.eq('NotRequested');
+    };
+
+    const verifyFaceMatchAnalysis = (jsonData) => {
+        expect(jsonData.data.result.faceMatchAnalysis.usedImages).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.faceMatchAnalysis.history).to.be.an('array').that.is.empty;
+        expect(jsonData.data.result.faceMatchAnalysis.status).to.eq('NotRequested');
+    };
+
+
+    it('Verify status', () => {
+        verifyJsonData(jsonData);
+    });
+
+    it('Verify result documentAnalysis', () => {
+        verifyDocumentAnalysis(jsonData);
+    });
+
+    it('Verify result livenessAnalysis', () => {
+        verifyLivenessAnalysis(jsonData);
+    });
+
+    it('Verify result faceMatchAnalysis', () => {
+        verifyFaceMatchAnalysis(jsonData);
+    });
+});
+describe('POST ID Scan API Test success/PASS', () => {
+    const verifyJsonData = (jsonData) => {
+        expect(jsonData).to.have.property('data');
+        expect(jsonData.data.status).to.exist;
+        expect(jsonData.data.status).to.eq('GeneratedLink');
+        expect(jsonData.data.errors).to.be.an('array').that.is.empty;
+        const expectedId = Cypress.env('sessionId');
+        expect(jsonData.data.id).to.eql(expectedId);
+    };
+
+    it('should perform an ID scan request successfully', () => {
+        cy.request({
+            method: 'POST',
+            url: Cypress.env('API_URL'),
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': Cypress.env('API_KEY')
+            },
+            body: {
+                "redirect_success": "https://www.google.com/?q=success",
+                "redirect_failure": "https://www.bing.com?q=failure",
+                "relay_state": "internal-user-id",
+                "gpdr_user_id": "gdpr-user-id",
+                "webhook": "https://webhook.site/340f6dc8-80ac-4dc8-b43f-9b94d3dc26ef",
+                "metadata": {
+                    "analysis_types": [
+                        "Document"
+                    ]
+                }
+            }
+        }).then((response) => {
+            const statusCode = response.status;
+            const isSuccessfulStatusCode = statusCode >= 200 && statusCode < 300;
+
+            if (isSuccessfulStatusCode) {
+                const jsonData = response.body;
+                Cypress.env('sessionId', jsonData.data.id);
+                Cypress.env('redirectUrl', jsonData.data.redirect_url);
+                Cypress.env('jsonData', jsonData); // Saving jsonData to an environment variable
+                verifyJsonData(jsonData);
+
                 cy.visit(jsonData.data.redirect_url);
                 cy.wait(1000);
                 cy.get('.continue-in-browser__btn').should('be.visible').click();
                 cy.get('.select-flow__actions > :nth-child(2)').click();
                 cy.get('.option-list > :nth-child(2)').click();
 
-                // Upload the front side of the passport
+
                 const filePath1 = 'pass.png';
-                // Load the fixture file as a base64 string
+
                 cy.fixture('pass.png').then((filePath1) => {
-                    // Convert the base64 string to a Blob object
                     const frontBlob = Cypress.Blob.base64StringToBlob(filePath1, 'image/png');
-                    // Create a new File object from the Blob
                     const frontFile = new File([frontBlob], 'ID_card.png', { type: 'image/png' });
-                    // Create a new DataTransfer object and add the File to it
                     const frontDataTransfer = new DataTransfer();
                     frontDataTransfer.items.add(frontFile);
-                    // Set the File object on the input element
+
                     cy.get('input[type=file]').eq(0).then((input) => {
                         input[0].files = frontDataTransfer.files;
-                        // Dispatch a change event to trigger any event listeners
                         input[0].dispatchEvent(new Event('change', { bubbles: true }));
                         cy.get('.btn-primary').click();
+                        cy.get('#L2AGLb > .QS5gu').click();
                     });
 
 
@@ -578,50 +834,22 @@ describe('POST ID Scan API Test/PASS', () => {
     });
 
 });
-describe('GET ID Scan API Test pending/PASS', () => {
-    // Function to verify the JSON data structure and values
-    const verifyJsonData = (jsonData) => {
-        expect(jsonData).to.have.property('data');
-        expect(jsonData.data.status).to.exist;
-        expect(jsonData.data.status).to.eq('GeneratedLink');
-        expect(jsonData.data.errors).to.be.an('array').that.is.empty;
-        const expectedId = Cypress.env('sessionId');
-        expect(jsonData.data.id).to.eql(expectedId);
-    };
-    // Function to verify document analysis in the JSON data
-    const verifyDocumentAnalysis = (jsonData) => {
-        expect(jsonData).to.have.property('data');
-        expect(jsonData.data.result.documentAnalysis.images).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.documentAnalysis.ignoredErrorsInFields).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.documentAnalysis.excludedDocumentIds).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.documentAnalysis.history).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.documentAnalysis.status).to.eq('Requested');
-    };
-    // Function to verify liveness analysis in the JSON data
-    const verifyLivenessAnalysis = (jsonData) => {
-        expect(jsonData).to.have.property('data');
-        expect(jsonData.data.result.livenessAnalysis.history).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.livenessAnalysis.status).to.eq('NotRequested');
-    };
-    // Function to verify face match analysis in the JSON data
-    const verifyFaceMatchAnalysis = (jsonData) => {
-        expect(jsonData).to.have.property('data');
-        expect(jsonData.data.result.faceMatchAnalysis.usedImages).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.faceMatchAnalysis.history).to.be.an('array').that.is.empty;
-        expect(jsonData.data.result.faceMatchAnalysis.status).to.eq('NotRequested');
-    };
-
-
-
-    it('GET-PENDING', () => {
+describe('GET ID Scan API Test success/DRIVING_LICENSE', () => {
+    let jsonData;
+    before(() => {
         const getUrl = Cypress.env('GET_URL');
         const sessionId = Cypress.env('sessionId');
         const apiKey = Cypress.env('API_KEY');
+        const details = Cypress.env('details');
+
+        // Log URL and headers for debugging
+        cy.log(`GET URL: ${getUrl}/${sessionId}`);
+        cy.log(`Authorization: ${apiKey}`);
 
         expect(getUrl, 'GET_URL environment variable').to.not.be.undefined;
         expect(sessionId, 'sessionId environment variable').to.not.be.undefined;
         expect(apiKey, 'API_KEY environment variable').to.not.be.undefined;
-        // Send a GET request to the API
+
         cy.request({
             method: 'GET',
             url: `${getUrl}/${sessionId}`,
@@ -631,105 +859,60 @@ describe('GET ID Scan API Test pending/PASS', () => {
             },
             failOnStatusCode: false
         }).then((response) => {
-            // Log the status code and response body
+            // Log full response for debugging
             cy.log(`Statuskod: ${response.status}`);
             cy.log(`Svar: ${JSON.stringify(response.body)}`);
-
-            // Handle different status codes
-            if (response.status === 400) {
-                cy.log('400 Bad Request - Kontrollera URL, headers och payload.');
-                throw new Error('400 Bad Request');
-            } else if (response.status >= 200 && response.status < 300) {
-                const jsonData = response.body;
-                // Save sessionId and redirectUrl to Cypress environment variables
-                Cypress.env('sessionId', jsonData.data.id);
-                Cypress.env('redirectUrl', jsonData.data.redirect_url);
-                Cypress.env('jsonData', jsonData); // Saving jsonData to an environment variable
-            } else {
-                throw new Error(`Unexpected status code: ${response.status}`);
-            }
+            jsonData = response.body;
         });
     });
 
-    it('Verify status', () => {
-        const jsonData = Cypress.env('jsonData');
-        verifyJsonData(jsonData);
-    });
+    /*const VerifyLanguagecCountryCode = (jsonData) => {
+        const expectedLanguage = Cypress.env('Language');
+        expect(jsonData.data.language).to.eql(expectedLanguage);
+        const expectedCountryCode = Cypress.env('CountryCode');
+        expect(jsonData.data.country_code).to.an(expectedCountryCode);
+    };*/
 
-    it('Verify result documentAnalysis', () => {
-        const jsonData = Cypress.env('jsonData');
-        verifyDocumentAnalysis(jsonData);
-    });
 
-    it('Verify result livenessAnalysis', () => {
-        const jsonData = Cypress.env('jsonData');
-        verifyLivenessAnalysis(jsonData);
-    });
-
-    it('Verify result faceMatchAnalysis', () => {
-        const jsonData = Cypress.env('jsonData');
-        verifyFaceMatchAnalysis(jsonData);
-    });
-
-});
-describe('GET ID Scan API Test success/PASS', () => {
-    // Function to verify the JSON data structure and values
     const verifyJsonData = (jsonData) => {
-        expect(jsonData.data.request_data.redirect_failure).to.equal('https://www.bing.com/?q=failure');
+        expect(jsonData.data.request_data.redirect_failure).to.equal('https://www.bing.com?q=failure');
         expect(jsonData.data.request_data.redirect_success).to.equal('https://www.google.com/?q=success');
-        expect(jsonData.data.request_data.locale).to.equal('SV');
+        expect(jsonData.data.request_data.locale).to.equal('EN');
         expect(jsonData.data.request_data.relay_state).to.equal('internal-user-id');
-        expect(jsonData.data.request_data.gdpr_user_id).to.equal('gdpr_user_id');
+        //expect(jsonData.data.request_data.gdpr_user_id).to.equal('gdpr_user_id');
         expect(jsonData.data.request_data.webhook).to.equal('https://webhook.site/340f6dc8-80ac-4dc8-b43f-9b94d3dc26ef');
     };
-    // Function to verify the status in the JSON data
+
     const verifyStatus = (jsonData) => {
         expect(jsonData.data.status).to.eq('Declined');
     };
-    // Function to verify that there are no errors in the JSON data
-    const NoErorr = (jsonData) => {
-        expect(jsonData.data.errors).to.eql([]);
 
-    };
-    // Function to verify the analysis images in the JSON data
-    const verifyAnalysisImages = (jsonData) => {
-        const expectedAnalysisImages = Cypress.env('AnalysisImages');
-        Cypress.env('AnalysisImages', jsonData.data.result.documentAnalysis.images[0].url);
-        expect(jsonData.data.result.documentAnalysis.images[0].url).to.eql(expectedAnalysisImages);
-        expect(jsonData.data.result.documentAnalysis.textResult.validityStatus).to.eql('None');
-        expect(jsonData.data.result.documentAnalysis.summary.overallStatus).to.eql('Error');
-        expect(jsonData.data.result.documentAnalysis.images[0].mimeType).to.eql('image/jpeg');
-
-    };
-    // Function to verify the identity analysis in the JSON data
-    const verifyAnalysIdenfity = (jsonData) => {
+    const verifyAnalysisImagesIdenfity = (jsonData) => {
         expect(jsonData.data.result.documentAnalysis.identity.countryCode).to.eql('SE');
         expect(jsonData.data.result.documentAnalysis.identity.firstName).to.eql('SVEN');
         expect(jsonData.data.result.documentAnalysis.identity.lastName).to.eql('SPECIMEN');
         expect(jsonData.data.result.documentAnalysis.identity.fullName).to.eql('SPECIMEN SVEN');
-        expect(jsonData.data.result.documentAnalysis.identity.personalNumber).to.eql(8703142391);
+        expect(jsonData.data.result.documentAnalysis.identity.personalNumber).to.eql('8703142391');
         expect(jsonData.data.result.documentAnalysis.identity.gender).to.be.eql("M");
-        expect(jsonData.data.result.identity.dateOfBirth).to.eql('1987-03-14');
+        expect(jsonData.data.result.identity.dateOfBirth).to.eql("1987-03-14");
         expect(jsonData.data.result.documentAnalysis.identity.age).to.eql(37);
         expect(jsonData.data.result.documentAnalysis.identity.idProviderName).to.eql('DP50');
     };
-    // Function to verify identity information in English in the JSON data
+
     const verifyAnalysisImagesIdenfityEnglish = (jsonData) => {
         expect(jsonData.data.result.documentAnalysis.identityEnglish.countryCode).to.eql('SE');
         expect(jsonData.data.result.documentAnalysis.identityEnglish.firstName).to.eql('SVEN');
         expect(jsonData.data.result.documentAnalysis.identityEnglish.lastName).to.eql('SPECIMEN');
         expect(jsonData.data.result.documentAnalysis.identityEnglish.fullName).to.eql('SPECIMEN SVEN');
-        expect(jsonData.data.result.documentAnalysis.identityEnglish.personalNumber).to.eql(8703142391);
+        expect(jsonData.data.result.documentAnalysis.identityEnglish.personalNumber).to.eql('8703142391');
         expect(jsonData.data.result.documentAnalysis.identityEnglish.gender).to.be.eql("M");
-        expect(jsonData.data.result.documentAnalysis.identityEnglish.dateOfBirth).to.eql('1987-03-14');
         expect(jsonData.data.result.documentAnalysis.identityEnglish.age).to.eql(37);
         expect(jsonData.data.result.documentAnalysis.identity.idProviderName).to.eql('DP50');
     };
-    // Function to verify the overall status of the document analysis in the JSON data
     const verifyDocumentAnalysisOverallStatus = (jsonData) => {
         expect(jsonData.data.result.documentAnalysis.overallStatus).to.eq('Error');
     };
-    // Function to verify the document type in the JSON data
+
     const verifyAnalysisDocumentType = (jsonData) => {
         expect(jsonData.data.result.documentAnalysis.documentType.name).to.be.eq("Sweden - ePassport (2012)");
         expect(jsonData.data.result.documentAnalysis.documentType.type).to.be.eq("PASSPORT");
@@ -739,5 +922,30 @@ describe('GET ID Scan API Test success/PASS', () => {
         expect(jsonData.data.result.documentAnalysis.documentType.hasMrz).to.be.eq(true);
     };
 
-});
+    it('Verify JsonData', () => {
+        verifyJsonData(jsonData);
+    });
 
+    it('VerifyStatus', () => {
+        verifyStatus(jsonData);
+    });
+
+    it('Verify Analysis Images Idenfity', () => {
+        verifyAnalysisImagesIdenfity(jsonData);
+    });
+
+    it('Verify Analysis Images Idenfity English', () => {
+        verifyAnalysisImagesIdenfityEnglish(jsonData);
+    });
+
+    it('Verify Document Analysis Overall Status', () => {
+        verifyDocumentAnalysisOverallStatus(jsonData);
+    });
+
+    it('Verify Analysis Document Type', () => {
+        verifyAnalysisDocumentType(jsonData);
+    });
+
+
+
+});
