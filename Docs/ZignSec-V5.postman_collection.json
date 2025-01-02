@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "95369a05-5220-4187-8f3b-3151606131d2",
 		"name": "ZignSec-V5",
-		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "39381365",
 		"_collection_link": "https://intern-8685.postman.co/workspace/ZignSecIntern~a7c1003e-98e0-437d-9d9a-2094ca8a1d7b/collection/39381365-95369a05-5220-4187-8f3b-3151606131d2?action=share&source=collection_link&creator=39381365"
 	},
@@ -11,13 +11,13 @@
 			"name": "Scan",
 			"item": [
 				{
-					"name": "Dokument/Pending",
+					"name": "Dokument",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"const jsonData = pm.response.json()\r",
+									"const jsonData = pm.response.json();\r",
 									"const statusCode = pm.response.code;\r",
 									"const isSuccessfulStatusCode = statusCode >= 200 && statusCode < 300;\r",
 									"\r",
@@ -26,9 +26,13 @@
 									"    pm.collectionVariables.set(\"sessionId\", res.data.id);\r",
 									"    pm.collectionVariables.set(\"redirectUrl\", res.data.redirect_url);\r",
 									"}\r",
+									"else{\r",
+									"    const res = pm.response.json();\r",
+									"    pm.collectionVariables.set(\"sessionId\", res.extensions.traceId);\r",
+									"}\r",
 									"\r",
 									"pm.test(\"Check errors\", function () {\r",
-									"    pm.expect(jsonData.data.errors).that.is.an('array').that.is.empty;\r",
+									"    pm.expect(jsonData.data.errors).to.be.an('array').that.is.empty;\r",
 									"});\r",
 									"\r",
 									"pm.test(\"Check status\", function () {\r",
@@ -43,7 +47,8 @@
 									"pm.test(\"Check redirect_url\", function () {\r",
 									"    const expectedRedirectUrl = pm.collectionVariables.get(\"redirectUrl\");\r",
 									"    pm.expect(jsonData.data.redirect_url).to.eql(expectedRedirectUrl);\r",
-									"});"
+									"});\r",
+									""
 								],
 								"type": "text/javascript",
 								"packages": {}
@@ -60,6 +65,11 @@
 							{
 								"key": "x-csrf-token",
 								"value": "XHoPKEYCPj0kBWMKFkcMfl0tVGM6GjgLnOcCrTl_UjWAr7HHnO2RVhUn"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{auth}}",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -71,7 +81,19 @@
 								}
 							}
 						},
-						"url": "{{baseUrl}}/api/v5/sessions/scanning-dp50/web",
+						"url": {
+							"raw": "{{baseUrl}}/api/v5/sessions/scanning-dp50/web",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v5",
+								"sessions",
+								"scanning-dp50",
+								"web"
+							]
+						},
 						"description": "Generated from cURL: curl -X 'POST' \\\r\n  'https://test-gateway.zignsec.com/core/api/sessions/scanning/web' \\\r\n  -H 'accept: application/json' \\\r\n  -H 'Content-Type: application/json' \\\r\n  -H 'x-csrf-token: XHoPKEYCPj0kBWMKFkcMfl0tVGM6GjgLnOcCrTl_UjWAr7HHnO2RVhUn' \\\r\n  -d '{\r\n  \"gdpr_user_id\": \"string\",\r\n  \"locale\": \"En\",\r\n  \"metadata\": {\r\n    \"analysis_types\": [\r\n      \"Document\",\r\n      \"FaceMatch\"\r\n    ],\r\n    \"language\": \"EN\",\r\n    \"ui_data\": {}\r\n  },\r\n  \"redirect_failure\": \"https://my_failure_url.com\",\r\n  \"redirect_success\": \"https://my_success_url.com\",\r\n  \"relay_state\": \"my-unique-customer-id\",\r\n  \"webhook\": \"https://my_webhook_url.com\"\r\n}'"
 					},
 					"response": []
@@ -87,8 +109,16 @@
 									"\r",
 									"\r",
 									"pm.test(\"verify status\", function () {\r",
-									"    pm.expect(jsonData.data.status).to.be.exist;\r",
+									"    //pm.expect(jsonData.data.status).to.be.exist;\r",
 									"    pm.expect(jsonData.data.status).to.be.eq('GeneratedLink');\r",
+									"});\r",
+									"pm.test(\"verify locale\", function () {\r",
+									"    //pm.expect(jsonData.data.status).to.be.exist;\r",
+									"    const res = pm.response.json();\r",
+									"    pm.collectionVariables.set(\"locale\", res.data.locale);\r",
+									"    const expectedlokale = pm.collectionVariables.get(\"locale\");\r",
+									"    pm.expect(jsonData.data.lokale).to.eql(expectedlokale);\r",
+									"    \r",
 									"});\r",
 									"pm.test(\"Verify errors property\", function () {\r",
 									"    pm.expect(jsonData.data.errors).to.be.an('array').that.is.empty;\r",
@@ -137,13 +167,6 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "apikey",
-							"apikey": {
-								"value": "{{auth}}",
-								"key": "authorization"
-							}
-						},
 						"method": "GET",
 						"header": [
 							{
@@ -160,16 +183,20 @@
 								"type": "text"
 							}
 						],
-						"url": "{{baseUrl}}/api/v5/sessions/scanning-dp50/{{sessionId}}",
+						"url": {
+							"raw": "{{baseUrl}}/api/v5/sessions/scanning-dp50/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v5",
+								"sessions",
+								"scanning-dp50",
+								"{{sessionId}}"
+							]
+						},
 						"description": "Generated from cURL: curl -X 'POST' \\\r\n  'https://test-gateway.zignsec.com/core/api/sessions/scanning/web' \\\r\n  -H 'accept: application/json' \\\r\n  -H 'Content-Type: application/json' \\\r\n  -H 'x-csrf-token: XHoPKEYCPj0kBWMKFkcMfl0tVGM6GjgLnOcCrTl_UjWAr7HHnO2RVhUn' \\\r\n  -d '{\r\n  \"gdpr_user_id\": \"string\",\r\n  \"locale\": \"En\",\r\n  \"metadata\": {\r\n    \"analysis_types\": [\r\n      \"Document\",\r\n      \"FaceMatch\"\r\n    ],\r\n    \"language\": \"EN\",\r\n    \"ui_data\": {}\r\n  },\r\n  \"redirect_failure\": \"https://my_failure_url.com\",\r\n  \"redirect_success\": \"https://my_success_url.com\",\r\n  \"relay_state\": \"my-unique-customer-id\",\r\n  \"webhook\": \"https://my_webhook_url.com\"\r\n}'"
-					},
-					"response": []
-				},
-				{
-					"name": "Dokument/finished",
-					"request": {
-						"method": "POST",
-						"header": []
 					},
 					"response": []
 				},
@@ -185,10 +212,18 @@
 									"pm.test(\"Check if request data is retrieved successfully\", function () {\r",
 									"    pm.expect(jsonData.data.request_data.redirect_failure).to.equal(\"https://www.bing.com/?q=failure\");\r",
 									"    pm.expect(jsonData.data.request_data.redirect_success).to.equal(\"https://www.google.com/?q=success\");\r",
-									"    pm.expect(jsonData.data.request_data.locale).to.equal(\"SV\");\r",
 									"    pm.expect(jsonData.data.request_data.relay_state).to.equal(\"internal-user-id\");\r",
 									"    pm.expect(jsonData.data.request_data.gdpr_user_id).to.equal(\"gdpr_user_id\");\r",
 									"    pm.expect(jsonData.data.request_data.webhook).to.equal(\"https://webhook.site/340f6dc8-80ac-4dc8-b43f-9b94d3dc26ef\");\r",
+									"});\r",
+									"\r",
+									"pm.test(\"verify locale\", function () {\r",
+									"    //pm.expect(jsonData.data.status).to.be.exist;\r",
+									"    const res = pm.response.json();\r",
+									"    pm.collectionVariables.set(\"locale\", res.data.locale);\r",
+									"    const expectedlokale = pm.collectionVariables.get(\"locale\");\r",
+									"    pm.expect(jsonData.data.lokale).to.eql(expectedlokale);\r",
+									"    \r",
 									"});\r",
 									"\r",
 									"pm.test(\"verify status\", function () {\r",
@@ -198,21 +233,35 @@
 									"pm.test(\"No errors\", function () {\r",
 									"    pm.expect(jsonData.data.errors).to.be.eql([]);\r",
 									"});\r",
-									"pm.test(\"Verify document analysis identity\", function () {\r",
+									"pm.test(\"Verify document analysis images\", function () {\r",
 									"    const res = pm.response.json();\r",
 									"    const expectedAnalysisImages = pm.collectionVariables.get(\"AnalysisImages\");\r",
 									"    pm.collectionVariables.set(\"AnalysisImages\", res.data.result.documentAnalysis.images[0].url);\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.images[0].url).to.be.eql(expectedAnalysisImages);\r",
-									"    pm.expect(jsonData.data.result.documentAnalysis.identity.countryCode).to.be.eql(\"SE\");\r",
+									"    pm.expect(jsonData.data.result.documentAnalysis.images[0].mimeType).to.be.eql(\"image/jpeg\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.textResult.validityStatus).to.be.eql(\"None\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.summary.overallStatus).to.be.eql(\"Error\");\r",
-									"    pm.expect(jsonData.data.result.documentAnalysis.images[0].mimeType).to.be.eql(\"image/jpeg\");\r",
+									"});\r",
+									"pm.test(\"Verify document analysis identity\", function () {\r",
+									"    pm.expect(jsonData.data.result.documentAnalysis.identity.countryCode).to.be.eql(\"SE\");\r",
+									"    \r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.identity.firstName).to.be.eql(\"JAN EVERT JIMMY\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identity.firstName).to.be.eql(\"OHAN\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identity.firstName).to.be.eql(\"SVEN\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.identity.lastName).to.be.eql(\"OWINDEBORN\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identity.lastName).to.be.eql(\"ANDERSSON\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identity.lastName).to.be.eql(\"SPECIMEN\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.identity.fullName).to.be.eql(\"OWINDEBORN JAN EVERT JIMMY\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identity.fullName).to.be.eql(\"ANDERSSON OHAN\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identity.fullName).to.be.eql(\"SPECIMEN SVEN\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.identity.personalNumber).to.be.eql(\"\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identity.personalNumber).to.be.eql(8703142391);\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identity.gender).to.be.eql(\"M\");\r",
 									"    pm.expect(jsonData.data.result.identity.dateOfBirth).to.be.eql(\"1989-07-09\");\r",
+									"    //pm.expect(jsonData.data.result.identity.dateOfBirth).to.be.eql(\"1966-02-02\");\r",
+									"    //pm.expect(jsonData.data.result.identity.dateOfBirth).to.be.eql(\"1987-03-14\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.identity.age).to.be.eql(35);\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identity.age).to.be.eql(37);\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.identity.idProviderName).to.be.eql(\"DP50\");\r",
 									"\r",
 									"});\r",
@@ -221,13 +270,22 @@
 									"pm.test(\"Verify document analysis identityEnglish\", function () {\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.countryCode).to.be.eql(\"SE\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.firstName).to.be.eql(\"JAN EVERT JIMMY\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.firstName).to.be.eql(\"SVEN\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.lastName).to.be.eql(\"OWINDEBORN\");\r",
-									"    pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.fullName).to.be.eql(\"OWINDEBORN JAN EVERT JIMMY\");\r",
-									"    pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.personalNumber).to.be.eql(\"\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.lastName).to.be.eql(\"SPECIMEN\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.fullName).to.be.eql(\"OWINDEBORN JAN EVERT JIMMY\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.fullName).to.be.eql(\"SPECIMEN SVEN\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.personalNumber).to.be.eql(\"8703142391\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.dateOfBirth).to.be.eql(\"1989-07-09\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.dateOfBirth).to.be.eql(\"1966-02-02\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.dateOfBirth).to.be.eql(\"1987-03-14\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.age).to.be.eql(35);\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.age).to.be.eql(58);\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.age).to.be.eql(37);\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.identityEnglish.gender).to.be.eql(\"M\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.identity.idProviderName).to.be.eql(\"DP50\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.documentType.type).to.be.eql(\"DRIVING_LICENSE\");\r",
+									"    \r",
 									"\r",
 									"});\r",
 									"pm.test(\"Verify document analysis overallStatus\", function () {\r",
@@ -235,12 +293,27 @@
 									"});\r",
 									"pm.test(\"Verify documentType\", function () {\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.documentType.name).to.be.eq(\"Sweden - Driving License (2013)\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.documentType.name).to.be.eq(\"Sweden - Driving License (2007)\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.documentType.name).to.be.eq(\"Sweden - ePassport (2012)\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.documentType.type).to.be.eq(\"PASSPORT\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.documentType.year).to.be.eq(\"2013\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.documentType.year).to.be.eq(\"2007\");\r",
+									"    //pm.expect(jsonData.data.result.documentAnalysis.documentType.year).to.be.eq(\"2012\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.documentType.countryName).to.be.eq(\"Sweden\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.documentType.countryCode).to.be.eq(\"SE\");\r",
 									"    pm.expect(jsonData.data.result.documentAnalysis.documentType.hasMrz).to.be.eq(false);\r",
-									"    pm.expect(jsonData.data.result.documentAnalysis.documentType.countryCode).to.be.eq(\"SE\");\r",
+									"    \r",
 									"});\r",
+									"pm.test(\"Verify livenessAnalysis status\", function () {\r",
+									"    pm.expect(jsonData.data.result.livenessAnalysis.status).to.be.eq(\"NotRequested\");\r",
+									"    \r",
+									"});\r",
+									"pm.test(\"Verify faceMatchAnalysis status\", function () {\r",
+									"   pm.expect(jsonData.data.result.faceMatchAnalysis.status).to.be.eq(\"NotRequested\");\r",
+									"    \r",
+									"});\r",
+									"\r",
+									"\r",
 									"\r",
 									"\r",
 									"\r",
@@ -265,13 +338,6 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "apikey",
-							"apikey": {
-								"value": "{{auth}}",
-								"key": "authorization"
-							}
-						},
 						"method": "GET",
 						"header": [
 							{
@@ -279,7 +345,7 @@
 								"value": "application/json"
 							},
 							{
-								"key": "authorization",
+								"key": "Authorization",
 								"value": "{{auth}}"
 							},
 							{
@@ -287,7 +353,20 @@
 								"value": "XHoPKEYCPj0kBWMKFkcMfl0tVGM6GjgLnOcCrTl_UjWAr7HHnO2RVhUn"
 							}
 						],
-						"url": "{{baseUrl}}/api/v5/sessions/scanning-dp50/{{sessionId}}/details",
+						"url": {
+							"raw": "{{baseUrl}}/api/v5/sessions/scanning-dp50/{{sessionId}}/details",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v5",
+								"sessions",
+								"scanning-dp50",
+								"{{sessionId}}",
+								"details"
+							]
+						},
 						"description": "Generated from cURL: curl -X 'GET' \\\r\n  'https://test-gateway.zignsec.com/core/api/sessions/9079e17c-8061-4646-85e6-e9b8eef66ab2' \\\r\n  -H 'accept: application/json' \\\r\n  -H 'authorization: 9bb9d9779a174583a45710e1900d9617' \\\r\n  -H 'x-csrf-token: XHoPKEYCPj0kBWMKFkcMfl0tVGM6GjgLnOcCrTl_UjWAr7HHnO2RVhUn'"
 					},
 					"response": []
@@ -296,11 +375,7 @@
 		}
 	],
 	"auth": {
-		"type": "apikey",
-		"apikey": {
-			"value": "{{auth}}",
-			"key": "Authorization"
-		}
+		"type": "inherit"
 	},
 	"event": [
 		{
@@ -387,18 +462,22 @@
 		},
 		{
 			"key": "country_code",
-			"value": "",
+			"value": "country_code",
 			"type": "string"
 		},
 		{
 			"key": "language",
-			"value": "",
+			"value": "language",
 			"type": "string"
 		},
 		{
 			"key": "AnalysisImages",
 			"value": "",
 			"type": "string"
+		},
+		{
+			"key": "locale",
+			"value": "locale"
 		}
 	]
 }

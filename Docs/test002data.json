@@ -1,0 +1,46 @@
+[
+    {
+		
+        "language": "csi",
+        "country_code": "Czi"
+    },
+    {
+        "language": "eng",
+        "country_code": "AUs"
+    },
+    {
+        "language": "fra",
+        "country_code": "FRA"
+    },
+    {
+        "language": "det",
+        "country_code": "DET"
+    },
+    {
+        "language": "ele",
+        "country_code": "GRE"
+    },
+    {
+        "language": "ita",
+        "country_code": "ITA"
+    },
+    {
+        "language": "rus",
+        "country_code": "RUS"
+    },
+    {
+        "language": "est",
+        "country_code": "EST"
+    },
+    {
+        "language": "sve",
+        "country_code": "SVE"
+    },
+    {
+        "language": "tru",
+        "country_code": "TRU"
+    }
+]
+
+
+

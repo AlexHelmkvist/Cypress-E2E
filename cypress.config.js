@@ -3,9 +3,14 @@ const { defineConfig } = require('cypress');
 module.exports = defineConfig({
   e2e: {
     setupNodeEvents(on, config) {
-
+      // implement node event listeners here
     },
-    //baseUrl: "https://test-gateway.zignsec.com/api/v5/sessions/scanning-dp50/web",
+    baseUrl: "https://test-gateway.zignsec.com/api/v5/sessions/scanning-dp50",
+  },
+  component: {
+    setupNodeEvents(on, config) {
+      // implement node event listeners here
+    },
   },
   browsers: [
     {
@@ -15,8 +20,7 @@ module.exports = defineConfig({
       displayName: 'Chrome',
       version: 'latest',
       path: 'C:/Program Files/Google/Chrome/Application/chrome.exe',
-      majorVersion: 91,
-      info: 'Inställningar för Chrome'
+      majorVersion: 91 // Lägg till majorVersion
     },
     {
       name: 'firefox',
@@ -25,8 +29,7 @@ module.exports = defineConfig({
       displayName: 'Firefox',
       version: 'latest',
       path: 'C:/Program Files/Mozilla Firefox/firefox.exe',
-      majorVersion: 89,
-      info: 'Inställningar för Firefox'
+      majorVersion: 89 // Lägg till majorVersion
     },
     {
       name: 'edge',
@@ -35,8 +38,7 @@ module.exports = defineConfig({
       displayName: 'Edge',
       version: 'latest',
       path: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-      majorVersion: 91,
-      info: 'Inställningar för Edge'
+      majorVersion: 91 // Lägg till majorVersion
     }
   ]
 });
