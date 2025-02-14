@@ -1,9 +1,17 @@
 const { defineConfig } = require('cypress');
 
 module.exports = defineConfig({
+  reporter: 'cypress-mochawesome-reporter',
+  reporterOptions: {
+    reportDir: 'cypress/reports',
+    overwrite: false,
+    html: false,
+    json: true
+  },
   e2e: {
     setupNodeEvents(on, config) {
-      // implement node event listeners here
+      require('cypress-mochawesome-reporter/plugin')(on);
+
     },
     baseUrl: "https://test-gateway.zignsec.com/api/v5/sessions/scanning-dp50",
   },
